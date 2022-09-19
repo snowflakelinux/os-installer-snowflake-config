@@ -1,0 +1,73 @@
+%YAML 1.2
+---
+# This is an example config file for OS-Installer.
+# Place your config under /etc/os-installer/config.yaml for it to be used.
+# If a value is not defined, it's default will be used.
+
+# Name of the distribution.
+# Default: 'Untitled'
+distribution_name: 'SnowflakeOS'
+
+# Whether the installation needs an internet connection.
+# Default: yes
+internet_connection_required: yes
+
+# A URL/IP address to be used to check for an existing internet connection.
+# Default: 'http://nmcheck.gnome.org/check_network_status.txt'
+internet_checker_url: 'http://nmcheck.gnome.org/check_network_status.txt'
+
+# Skip the language selection dialog by specifing a language, e.g. 'pt_BR'
+# Default: no
+fixed_language: no
+
+# A selection of languages the installer should present by default.
+# Note: For a language to be available, it needs to be provided by the system
+# and the installer needs to have a translation into that language.
+# Default: ['ar', 'de', 'en', 'es', 'fr', 'ja', 'ru', 'zh']
+suggested_languages:
+    - 'en'
+    - 'ar'
+    - 'de'
+    - 'es'
+    - 'fr'
+    - 'ja'
+    - 'ru'
+    - 'zh'
+
+# Show a welcome page after language selection.
+# A custom logo and text can be defined. Otherwise a default is used.
+# Default: logo: None, text: None, usage: yes
+welcome_page:
+    logo    : '/etc/os-installer/icons/snowflake.png'
+    text    : 'Still testing, proceed with caution!'
+    usage   : yes
+
+# Minimum disk size needed for the installation (in Gigabyte)
+# Default: 5
+minimum_disk_size: 10
+
+# Whether to offer setting a disk encryption PIN
+# Default: yes
+offer_disk_encryption: no
+
+# A list of additional software packages that can be optionally be selected
+# from the installer. The package string will be passed to the installation
+# script without changes, so you can bundle multiple packages as one point.
+# Required fields are: package, default, name, description, icon_path
+# Additionally translations for name and description can be specified by
+# placing a language code at the end after an underscore, e.g.: 'name_jp'
+# Default: []
+# additional_software:
+#     - package        : 'firefox'
+#       default        : yes
+#       name           : 'Firefox'
+#       name_de        : 'Feuerfuchs'
+#       description    : 'Popular Web Browser from Mozilla'
+#       description_de : 'Beliebter Webbrowser entwickelt durch Mozilla'
+#       icon_path      : '/etc/os-installer/icons/firefox.png'
+#     - package        : 'libreoffice-fresh'
+#       default        : no
+#       name           : 'LibreOffice'
+#       description    : 'Office Suite for Documents, Tables, Presentations and more'
+#       description_de : 'Sammlung an BüroAnwendungen für Dokumente, Tabellen, Präsentationen und mehr'
+#       icon_path      : '/etc/os-installer/icons/libreoffice-main.png'
