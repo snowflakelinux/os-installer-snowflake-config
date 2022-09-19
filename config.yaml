@@ -39,7 +39,7 @@ suggested_languages:
 # Default: logo: None, text: None, usage: yes
 welcome_page:
     logo    : '/etc/os-installer/icons/snowflake.png'
-    text    : 'Still testing, proceed with caution!'
+    text    : 'Welcome to the SnowflakeOS installation! Still in development, proceed with caution!'
     usage   : yes
 
 # Minimum disk size needed for the installation (in Gigabyte)

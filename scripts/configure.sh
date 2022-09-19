@@ -54,21 +54,20 @@ echo 'OSI_ADDITIONAL_SOFTWARE  ' $OSI_ADDITIONAL_SOFTWARE
 echo ''
 
 NIXOSVER=$(nixos-version | head -c 5)
+USERNAME=$(echo $OSI_USER_NAME | iconv -f utf-8 -t ascii//translit | sed 's/[[:space:]]//g' | tr '[:upper:]' '[:lower:]')
 
-# USE echo -n
-
-FLAKETXT="""{
+FLAKETXT="{
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixpkgs.url = \"github:NixOS/nixpkgs/nixos-unstable\";
     snowflake = {
-      url = "github:snowflakelinux/snowflake-modules";
-      inputs.nixpkgs.follows = "nixpkgs";
+      url = \"github:snowflakelinux/snowflake-modules\";
+      inputs.nixpkgs.follows = \"nixpkgs\";
     };
   };
 
   outputs = { self, nixpkgs, snowflake, ... }@inputs:
     let
-      system = "x86_64-linux";
+      system = \"x86_64-linux\";
     in
     {
       nixosConfigurations.snowflakeos = nixpkgs.lib.nixosSystem {
@@ -82,17 +81,17 @@ FLAKETXT="""{
     };
   };
 }
-"""
+"
 
-SNOWFLAKETXT="""{ config, pkgs, inputs, system, ... }:
+SNOWFLAKETXT="{ config, pkgs, inputs, system, ... }:
 
 {
   snowflakeos.gnome.enable = true;
   snowflakeos.osInfo.enable = true;
 }
-"""
+"
 
-CFGHEAD="""# Edit this configuration file to define what should be installed on
+CFGHEAD="# Edit this configuration file to define what should be installed on
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 
@@ -104,97 +103,97 @@ CFGHEAD="""# Edit this configuration file to define what should be installed on
       ./hardware-configuration.nix
     ];
 
-"""
-CFGBOOTEFI="""  # Bootloader.
+"
+CFGBOOTEFI="  # Bootloader.
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
-  boot.loader.efi.efiSysMountPoint = "/boot/efi";
+  boot.loader.efi.efiSysMountPoint = \"/boot/efi\";
 
-"""
+"
 
-CFGBOOTBIOS="""  # Bootloader.
+CFGBOOTBIOS="  # Bootloader.
   boot.loader.grub.enable = true;
-  boot.loader.grub.device = "@@bootdev@@";
+  boot.loader.grub.device = \"@@bootdev@@\";
   boot.loader.grub.useOSProber = true;
 
-"""
+"
 
-CFGBOOTCRYPT="""  # Setup keyfile
+CFGBOOTCRYPT="  # Setup keyfile
   boot.initrd.secrets = {
-    "/crypto_keyfile.bin" = null;
+    \"/crypto_keyfile.bin\" = null;
   };
 
-"""
+"
 
-CFGBOOTGRUBCRYPT="""  # Enable grub cryptodisk
+CFGBOOTGRUBCRYPT="  # Enable grub cryptodisk
   boot.loader.grub.enableCryptodisk=true;
 
-"""
+"
 
-CFGSWAPCRYPT="""  # Enable swap on luks
-  boot.initrd.luks.devices."@@swapdev@@".device = "/dev/disk/by-uuid/@@swapuuid@@";
-  boot.initrd.luks.devices."@@swapdev@@".keyFile = "/crypto_keyfile.bin";
+CFGSWAPCRYPT="  # Enable swap on luks
+  boot.initrd.luks.devices.\"@@swapdev@@\".device = \"/dev/disk/by-uuid/@@swapuuid@@\";
+  boot.initrd.luks.devices.\"@@swapdev@@\".keyFile = \"/crypto_keyfile.bin\";
 
-"""
+"
 
-CFGNETWORK="""  networking.hostName = "snowflakeos"; # Define your hostname.
+CFGNETWORK="  networking.hostName = \"snowflakeos\"; # Define your hostname.
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
 
   # Configure network proxy if necessary
-  # networking.proxy.default = "http://user:password@proxy:port/";
-  # networking.proxy.noProxy = "127.0.0.1,localhost,internal.domain";
+  # networking.proxy.default = \"http://user:password@proxy:port/\";
+  # networking.proxy.noProxy = \"127.0.0.1,localhost,internal.domain\";
 
   # Enable networking
   networking.networkmanager.enable = true;
 
-"""
+"
 
-CFGTIME="""  # Set your time zone.
-  time.timeZone = "$OSI_TIMEZONE";
+CFGTIME="  # Set your time zone.
+  time.timeZone = $OSI_TIMEZONE;
 
-"""
+"
 
-CFGLOCALE="""  # Select internationalisation properties.
-  i18n.defaultLocale = "$OSI_LOCALE";
+CFGLOCALE="  # Select internationalisation properties.
+  i18n.defaultLocale = $OSI_LOCALE;
 
-"""
+"
 
-CFGLOCALEEXTRAS="""  i18n.extraLocaleSettings = {
-    LC_ADDRESS = "$OSI_FORMATS";
-    LC_IDENTIFICATION = "$OSI_FORMATS";
-    LC_MEASUREMENT = "$OSI_FORMATS";
-    LC_MONETARY = "$OSI_FORMATS";
-    LC_NAME = "$OSI_FORMATS";
-    LC_NUMERIC = "$OSI_FORMATS";
-    LC_PAPER = "$OSI_FORMATS";
-    LC_TELEPHONE = "$OSI_FORMATS";
-    LC_TIME = "$OSI_FORMATS";
+CFGLOCALEEXTRAS="  i18n.extraLocaleSettings = {
+    LC_ADDRESS = $OSI_FORMATS;
+    LC_IDENTIFICATION = $OSI_FORMATS;
+    LC_MEASUREMENT = $OSI_FORMATS;
+    LC_MONETARY = $OSI_FORMATS;
+    LC_NAME = $OSI_FORMATS;
+    LC_NUMERIC = $OSI_FORMATS;
+    LC_PAPER = $OSI_FORMATS;
+    LC_TELEPHONE = $OSI_FORMATS;
+    LC_TIME = $OSI_FORMATS;
   };
 
-"""
+"
 
-CFGGNOME="""  # Enable the X11 windowing system.
+CFGGNOME="  # Enable the X11 windowing system.
   services.xserver.enable = true;
 
   # Enable the GNOME Desktop Environment.
   services.xserver.displayManager.gdm.enable = true;
   services.xserver.desktopManager.gnome.enable = true;
 
-"""
+"
 
-CFGKEYMAP="""  # Configure keymap in X11
+CFGKEYMAP="  # Configure keymap in X11
   services.xserver = {
-    layout = "us";
-    xkbVariant = "";
+    layout = \"us\";
+    xkbVariant = \"\";
   };
 
-"""
-CFGCONSOLE="""  # Configure console keymap
-  console.keyMap = "";
+"
+CFGCONSOLE="  # Configure console keymap
+  console.keyMap = \"\";
 
-"""
+"
 
-CFGMISC="""  # Enable CUPS to print documents.
+CFGMISC="  # Enable CUPS to print documents.
   services.printing.enable = true;
 
   # Enable sound with pipewire.
@@ -217,35 +216,36 @@ CFGMISC="""  # Enable CUPS to print documents.
   # Enable touchpad support (enabled default in most desktopManager).
   # services.xserver.libinput.enable = true;
 
-"""
+"
 
-CFGUSERS="""  # Define a user account. Don't forget to set a password with ‘passwd’.
-  users.users.$OSI_USER_NAME = {
+CFGUSERS="  # Define a user account. Don't forget to set a password with ‘passwd’.
+  users.users.$USERNAME = {
     isNormalUser = true;
-    description = "$OSI_USER_NAME";
-    extraGroups = [ "wheel" "networkmanager" "dialout" ];;
+    description = $OSI_USER_NAME;
+    extraGroups = [ \"wheel\" \"networkmanager\" \"dialout\" ];
   };
 
-"""
+"
 
-CFGAUTOLOGIN="""  # Enable automatic login for the user.
+CFGAUTOLOGIN="  # Enable automatic login for the user.
   services.xserver.displayManager.autoLogin.enable = true;
-  services.xserver.displayManager.autoLogin.user = "$OSI_USER_NAME";
+  services.xserver.displayManager.autoLogin.user = $USERNAME;
 
-"""
+"
 
-CFGAUTOLOGINGDM="""  # Workaround for GNOME autologin: https://github.com/NixOS/nixpkgs/issues/103746#issuecomment-945091229
-  systemd.services."getty@tty1".enable = false;
-  systemd.services."autovt@tty1".enable = false;
+CFGAUTOLOGINGDM="  # Workaround for GNOME autologin: https://github.com/NixOS/nixpkgs/issues/103746#issuecomment-945091229
+  systemd.services.\"getty@tty1\".enable = false;
+  systemd.services.\"autovt@tty1\".enable = false;
 
-"""
+"
 
-CFGUNFREE="""  # Allow unfree packages
+CFGUNFREE="  # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
+  environment.sessionVariables.NIXPKGS_ALLOW_UNFREE = \"1\";
 
-"""
+"
 
-CFGPKGS="""  # List packages installed in system profile. To search, run:
+CFGPKGS="  # List packages installed in system profile. To search, run:
   # $ nix search wget
   environment.systemPackages = with pkgs; [
   #  vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
@@ -253,9 +253,9 @@ CFGPKGS="""  # List packages installed in system profile. To search, run:
     firefox
   ];
 
-"""
+"
 
-CFGTAIL="""  # Some programs need SUID wrappers, can be configured further or are
+CFGTAIL="  # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.
   # programs.mtr.enable = true;
   # programs.gnupg.agent = {
@@ -284,50 +284,45 @@ CFGTAIL="""  # Some programs need SUID wrappers, can be configured further or ar
   # this value at the release version of the first install of this system.
   # Before changing this value read the documentation for this option
   # (e.g. man configuration.nix or on https://nixos.org/nixos/options.html).
-  system.stateVersion = "$NIXOSVER"; # Did you read the comment?
+  system.stateVersion = \"$NIXOSVER\"; # Did you read the comment?
 
 }
-"""
-
-sleep 1
+"
 
 # Create flake.nix
-pkexec sh =c "echo -n \"$FLAKETXT\" > /tmp/os-installer/etc/nixos/flake.nix"
+pkexec sh -c 'echo -n "$0" > /tmp/os-installer/etc/nixos/flake.nix' "$FLAKETXT"
 
 # Create snowflake.nix
-pkexec sh -c "echo -n \"$SNOWFLAKETXT\" > /tmp/os-installer/etc/nixos/snowflake.nix"
+pkexec sh -c 'echo -n "$0" > /tmp/os-installer/etc/nixos/snowflake.nix' "$SNOWFLAKETXT"
 
 # Create configuration.nix
-pkexec echo -n "$CFGHEAD" > /tmp/os-installer/etc/nixos/configuration.nix
-pkexec echo -n "$CFGBOOTEFI" >> /tmp/os-installer/etc/nixos/configuration.nix
-pkexec echo -n "$CFGNETWORK" >> /tmp/os-installer/etc/nixos/configuration.nix
-pkexec echo -n "$CFGTIME" >> /tmp/os-installer/etc/nixos/configuration.nix
-pkexec echo -n "$CFGLOCALE" >> /tmp/os-installer/etc/nixos/configuration.nix
-if [[ $OSI_LOCALE != OSI_FORMATS ]]
+pkexec sh -c 'echo -n "$0" > /tmp/os-installer/etc/nixos/configuration.nix' "$CFGHEAD"
+pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGBOOTEFI"
+pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGNETWORK"
+pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGTIME"
+pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGLOCALE"
+if [[ $OSI_LOCALE != $OSI_FORMATS ]]
 then
-    pkexec echo -n "$CFGLOCALEEXTRAS" >> /tmp/os-installer/etc/nixos/configuration.nix
+    pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGLOCALEEXTRAS"
 fi
-pkexec echo -n "$CFGGNOME" >> /tmp/os-installer/etc/nixos/configuration.nix
-pkexec echo -n "$CFGMISC" >> /tmp/os-installer/etc/nixos/configuration.nix
-pkexec echo -n "$CFGUSERS" >> /tmp/os-installer/etc/nixos/configuration.nix
-if [[ $OSI_AUTOLOGIN == 1 ]]
+pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGGNOME"
+pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGMISC"
+pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGUSERS"
+if [[ $OSI_USER_AUTOLOGIN == 1 ]]
 then
-    pkexec echo -n "$CFGAUTOLOGIN" >> /tmp/os-installer/etc/nixos/configuration.nix
-    pkexec echo -n "$CFGAUTOLOGINGDM" >> /tmp/os-installer/etc/nixos/configuration.nix
+    pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGAUTOLOGIN"
+    pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGAUTOLOGINGDM"
 fi
-pkexec echo -n "$CFGUNFREE" >> /tmp/os-installer/etc/nixos/configuration.nix
-pkexec echo -n "$CFGPKGS" >> /tmp/os-installer/etc/nixos/configuration.nix
-pkexec echo -n "$CFGTAIL" >> /tmp/os-installer/etc/nixos/configuration.nix
+pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGUNFREE"
+pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGPKGS"
+pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGTAIL"
 
 # Install SnowflakeOS
 pkexec nixos-install --root /tmp/os-installer --no-root-passwd --no-channel-copy --flake /tmp/os-installer/etc/nixos#snowflakeos
 
+echo ${USERNAME:1:-1}:${OSI_USER_PASSWORD:1:-1} | pkexec nixos-enter --root /tmp/os-installer -c chpasswd
+
 echo
 echo 'Configuration completed.'
-
-while true
-do
-    sleep 1
-done
 
 exit 0
