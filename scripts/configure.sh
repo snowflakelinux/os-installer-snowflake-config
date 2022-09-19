@@ -47,7 +47,7 @@ echo 'OSI_USE_ENCRYPTION       ' $OSI_USE_ENCRYPTION
 echo 'OSI_ENCRYPTION_PIN       ' $OSI_ENCRYPTION_PIN
 echo 'OSI_USER_NAME            ' $OSI_USER_NAME
 echo 'OSI_USER_AUTOLOGIN       ' $OSI_USER_AUTOLOGIN
-echo 'OSI_USER_PASSWORD        ' $OSI_USER_PASSWORD
+# echo 'OSI_USER_PASSWORD        ' $OSI_USER_PASSWORD
 echo 'OSI_FORMATS              ' $OSI_FORMATS
 echo 'OSI_TIMEZONE             ' $OSI_TIMEZONE
 echo 'OSI_ADDITIONAL_SOFTWARE  ' $OSI_ADDITIONAL_SOFTWARE
@@ -55,6 +55,8 @@ echo ''
 
 NIXOSVER=$(nixos-version | head -c 5)
 USERNAME=$(echo $OSI_USER_NAME | iconv -f utf-8 -t ascii//translit | sed 's/[[:space:]]//g' | tr '[:upper:]' '[:lower:]')
+KEYBOARD_LAYOUT=$(gsettings get org.gnome.desktop.input-sources sources | grep -o "'[^']*')" | sed "s/'//" | sed "s/')//" | head -n 1 | cut -f1 -d"+")
+KEYBOARD_VARIANT=$(gsettings get org.gnome.desktop.input-sources sources | grep -o "'[^']*')" | sed "s/'//" | sed "s/')//" | head -n 1 | grep -Po '\+.*' | cut -c2-)
 
 FLAKETXT="{
   inputs = {
@@ -172,6 +174,14 @@ CFGLOCALEEXTRAS="  i18n.extraLocaleSettings = {
 
 "
 
+CFGKEYMAP="  # Configure keymap in X11
+  services.xserver = {
+    layout = \"$KEYBOARD_LAYOUT\";
+    xkbVariant = \"$KEYBOARD_VARIANT\";
+  };
+
+"
+
 CFGGNOME="  # Enable the X11 windowing system.
   services.xserver.enable = true;
 
@@ -181,13 +191,6 @@ CFGGNOME="  # Enable the X11 windowing system.
 
 "
 
-CFGKEYMAP="  # Configure keymap in X11
-  services.xserver = {
-    layout = \"us\";
-    xkbVariant = \"\";
-  };
-
-"
 CFGCONSOLE="  # Configure console keymap
   console.keyMap = \"\";
 
@@ -305,6 +308,7 @@ if [[ $OSI_LOCALE != $OSI_FORMATS ]]
 then
     pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGLOCALEEXTRAS"
 fi
+pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGKEYMAP"
 pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGGNOME"
 pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGMISC"
 pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGUSERS"
