@@ -1,5 +1,5 @@
 #! /bin/sh
-
+set -e
 # This is an example installer script. For OS-Installer to use it, place it at:
 # /etc/os-installer/scripts/install.sh
 # The script gets called with the following environment variables set:
@@ -48,13 +48,6 @@ then
     echo 'Start is' $START
     echo 'Size is' $SIZE
     echo 'End is' $END
-    if [[ $SIZE < 10737418240  ]]
-    then
-        echo 'Partition is too small'
-        exit 1
-    else
-        echo 'Partition is big enough'
-    fi
 
     if [ -d /sys/firmware/efi/efivars/ ]
     then
@@ -101,6 +94,7 @@ then
                 if [[ $LINESTART -ge $START && $[ LINESTART + LINESIZE - 1 ] -le $END ]]
                 then
                     EFIPART=$(echo -E $line | awk '{print $1}')
+                    break
                 fi
             done <<< "$EFIPART"
             FSPART=$(lsblk $DISK -npbro PATH,PARTTYPENAME,START,SIZE | grep 'Linux\\x20filesystem')
@@ -110,6 +104,7 @@ then
                 if [[ $LINESTART -ge $START && $[ LINESTART + LINESIZE -1 ] -le $END ]]
                 then
                     FSPART=$(echo -E $line | awk '{print $1}')
+                    break
                 fi
             done <<< "$FSPART"
             SWAPPART=$(lsblk $DISK -npbro PATH,PARTTYPENAME,START,SIZE | grep 'Linux\\x20swap')
@@ -119,11 +114,9 @@ then
                 if [[ $LINESTART -ge $START && $[ LINESTART + LINESIZE -1 ] -le $END ]]
                 then
                     SWAPPART=$(echo -E $line | awk '{print $1}')
+                    break
                 fi
             done <<< "$SWAPPART"
-            echo 'EFI partition is' $EFIPART
-            echo 'Filesystem partition is' $FSPART
-            echo 'Swap partition is' $SWAPPART
             if [ -z ${EFIPART+x} ] || [ -z ${FSPART+x} ] || [ -z ${SWAPPART+x} ]
             then
                 echo 'EFI, root or swap partition not found'
@@ -163,13 +156,10 @@ then
             while IFS= read -r line; do
                 LINESTART=$(echo -E $line | awk '{print $3}')
                 LINESIZE=$[ $(echo -E $line | awk '{print $4}') / 512 ]
-                echo 'LINESTART' $LINESTART
-                echo 'LINESIZE' $LINESIZE
-                echo 'START' $START
-                echo 'SIZE' $SIZE
                 if [[ $LINESTART -ge $START && $[ LINESTART + LINESIZE - 1 ] -le $END ]]
                 then
                     FSPART=$(echo -E $line | awk '{print $1}')
+                    break
                 fi
             done <<< "$FSPART"
             SWAPPART=$(lsblk $DISK -npbro PATH,PARTTYPENAME,START,SIZE | grep 'Linux\\x20swap')
@@ -179,11 +169,9 @@ then
                 if [[ $LINESTART -ge $START && $[ LINESTART + LINESIZE -1 ] -le $END ]]
                 then
                     SWAPPART=$(echo -E $line | awk '{print $1}')
+                    break
                 fi
             done <<< "$SWAPPART"
-            echo 'EFI partition is' $EFIPART
-            echo 'Filesystem partition is' $FSPART
-            echo 'Swap partition is' $SWAPPART
             if [ -z ${EFIPART+x} ] || [ -z ${FSPART+x} ] || [ -z ${SWAPPART+x} ]
             then
                 echo 'EFI, root or swap partition not found'
@@ -195,7 +183,60 @@ then
         fi
     else
         echo 'Device is in BIOS mode'
-        exit 1
+        (
+          # Remove current partition
+          echo d
+          echo $DEV | awk '{print substr($0,length,1)}'
+          echo p
+          # Root partition
+          echo n
+          echo #primary
+          echo #partition number
+          echo $START
+          echo $[ END - 4294967296/512 ]
+          echo p
+          # Swap partition
+          echo n
+          echo #primary
+          echo #partition number
+          echo $[ END - 4294967296/512 + 1]
+          echo $END
+          echo p
+          # Write changes
+          echo w
+        ) | pkexec fdisk $DISK -W always
+        sleep 1
+        FSPART=$(lsblk $DISK -npbro PATH,PARTTYPENAME,START,SIZE | grep 'Linux')
+        while IFS= read -r line; do
+            LINESTART=$(echo -E $line | awk '{print $3}')
+            LINESIZE=$[ $(echo -E $line | awk '{print $4}') / 512 ]
+            if [[ $LINESTART -ge $START && $[ LINESTART + LINESIZE - 1 ] -le $END ]]
+            then
+                FSPART=$(echo -E $line | awk '{print $1}')
+                break
+            fi
+        done <<< "$FSPART"
+        SWAPPART=$(lsblk $DISK -npbro PATH,PARTTYPENAME,START,SIZE | grep 'Linux')
+        while IFS= read -r line; do
+            LINESTART=$(echo -E $line | awk '{print $3}')
+            LINESIZE=$[ $(echo -E $line | awk '{print $4}') / 512 ]
+            if [[ $LINESTART -ge $START && $[ LINESTART + LINESIZE -1 ] -le $END && $(echo -E $line | awk '{print $1}') != $FSPART ]]
+            then
+                SWAPPART=$(echo -E $line | awk '{print $1}')
+                break
+            fi
+        done <<< "$SWAPPART"
+        echo 'Filesystem partition is' $FSPART
+        echo 'Swap partition is' $SWAPPART
+        if [ -z ${FSPART+x} ] || [ -z ${SWAPPART+x} ]
+        then
+            echo 'Root or swap partition not found'
+            exit 1
+        else
+            pkexec sfdisk --part-type $DISK $(echo $SWAPPART | awk '{print substr($0,length,1)}') 82
+            pkexec mkfs.ext4 -F $FSPART
+            pkexec mkswap $SWAPPART
+        fi
     fi
 else
     if [ -d /sys/firmware/efi/efivars/ ]
@@ -245,19 +286,58 @@ else
         fi
     else
         echo 'Device is in BIOS mode'
-        exit 1
+        (
+          # MSDOS partition table
+          echo o
+          # Root partition
+          echo n
+          echo #primary
+          echo #part number
+          echo #start
+          echo -4G
+          # Swap partition
+          echo n
+          echo #primary
+          echo #part number
+          echo #start
+          echo #end
+          echo t
+          echo 2
+          echo swap
+          # Write changes
+          echo w
+        ) | pkexec fdisk $DEV -W always
+        sleep 1
+        FSPART=$(lsblk $DEV -npbro PATH,PARTTYPENAME | grep 'Linux' | head -n 1 | awk '{print $1}')
+        SWAPPART=$(lsblk $DEV -npbro PATH,PARTTYPENAME | grep 'Linux\\x20swap\\x20/\\x20Solaris' | head -n 1 | awk '{print $1}')
+        echo "Root partition is $FSPART"
+        echo "Swap partition is $SWAPPART"
+        if [ -z ${FSPART+x} ] || [ -z ${SWAPPART+x} ]
+        then
+            echo 'Root or swap partition not found'
+            exit 1
+        else
+            pkexec mkfs.ext4 -F $FSPART
+            pkexec mkswap $SWAPPART
+        fi
     fi
 fi
 
 echo 'Mounting partitions...'
-echo 'EFI partition is' $EFIPART
+if [ -d /sys/firmware/efi/efivars/ ]
+then
+    echo 'EFI partition is' $EFIPART
+fi
 echo 'Filesystem partition is' $FSPART
 echo 'Swap partition is' $SWAPPART
 pkexec rm -rf /tmp/os-installer
 pkexec mkdir -p /tmp/os-installer
 pkexec mount $FSPART /tmp/os-installer
-pkexec mkdir -p /tmp/os-installer/boot/efi
-pkexec mount $EFIPART /tmp/os-installer/boot/efi
+if [ -d /sys/firmware/efi/efivars/ ]
+then
+    pkexec mkdir -p /tmp/os-installer/boot/efi
+    pkexec mount $EFIPART /tmp/os-installer/boot/efi
+fi
 pkexec swapon $SWAPPART
 pkexec nixos-generate-config --root /tmp/os-installer
 

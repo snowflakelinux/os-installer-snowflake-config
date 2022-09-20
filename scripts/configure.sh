@@ -1,5 +1,5 @@
 #! /bin/sh
-
+set -e
 # This is an example configuration script. For OS-Installer to use it, place it at:
 # /etc/os-installer/scripts/configure.sh
 # The script gets called with the environment variables from the install script
@@ -58,6 +58,13 @@ USERNAME=$(echo $OSI_USER_NAME | iconv -f utf-8 -t ascii//translit | sed 's/[[:s
 KEYBOARD_LAYOUT=$(gsettings get org.gnome.desktop.input-sources sources | grep -o "'[^']*')" | sed "s/'//" | sed "s/')//" | head -n 1 | cut -f1 -d"+")
 KEYBOARD_VARIANT=$(gsettings get org.gnome.desktop.input-sources sources | grep -o "'[^']*')" | sed "s/'//" | sed "s/')//" | head -n 1 | grep -Po '\+.*' | cut -c2-)
 
+if [[ $OSI_DEVICE_IS_PARTITION == 1 ]]
+then
+  DISK=$(lsblk $(echo "$OSI_DEVICE_PATH" | tr -d '"') -npdbro pkname)
+else
+  DISK=$(echo "$OSI_DEVICE_PATH" | tr -d '"')
+fi
+
 FLAKETXT="{
   inputs = {
     nixpkgs.url = \"github:NixOS/nixpkgs/nixos-unstable\";
@@ -115,7 +122,7 @@ CFGBOOTEFI="  # Bootloader.
 
 CFGBOOTBIOS="  # Bootloader.
   boot.loader.grub.enable = true;
-  boot.loader.grub.device = \"@@bootdev@@\";
+  boot.loader.grub.device = \"$DISK\";
   boot.loader.grub.useOSProber = true;
 
 "
@@ -300,7 +307,12 @@ pkexec sh -c 'echo -n "$0" > /tmp/os-installer/etc/nixos/snowflake.nix' "$SNOWFL
 
 # Create configuration.nix
 pkexec sh -c 'echo -n "$0" > /tmp/os-installer/etc/nixos/configuration.nix' "$CFGHEAD"
-pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGBOOTEFI"
+if [[ -d /sys/firmware/efi/efivars ]]
+then
+    pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGBOOTEFI"
+else
+    pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGBOOTBIOS"
+fi
 pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGNETWORK"
 pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGTIME"
 pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGLOCALE"
