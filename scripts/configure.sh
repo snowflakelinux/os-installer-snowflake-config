@@ -145,6 +145,11 @@ CFGSWAPCRYPT="  # Enable swap on luks
 
 "
 
+CFGKERNEL="  # Use the latest kernel
+  boot.kernelPackages = pkgs.linuxPackages_latest;
+  
+"
+
 CFGNETWORK="  networking.hostName = \"snowflakeos\"; # Define your hostname.
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
 
@@ -313,6 +318,7 @@ then
 else
     pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGBOOTBIOS"
 fi
+pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGKERNEL"
 pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGNETWORK"
 pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGTIME"
 pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGLOCALE"
