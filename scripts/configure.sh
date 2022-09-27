@@ -76,9 +76,13 @@ FLAKETXT="{
       url = \"github:vlinkz/nix-software-center\";
       inputs.nixpkgs.follows = \"nixpkgs\";
     };
+    nixos-conf-editor = {
+      url = \"github:vlinkz/nixos-conf-editor\";
+      inputs.nixpkgs.follows = \"nixpkgs\";
+    };
   };
 
-  outputs = { self, nixpkgs, snowflake, nix-software-center, ... }@inputs:
+  outputs = { self, nixpkgs, snowflake, nix-software-center, nixos-conf-editor, ... }@inputs:
     let
       system = \"x86_64-linux\";
     in
@@ -90,6 +94,7 @@ FLAKETXT="{
           ./snowflake.nix
           snowflake.nixosModules.snowflake
           nix-software-center.nixosModules.\${system}.nix-software-center
+          nixos-conf-editor.nixosModules.\${system}.nixos-conf-editor
         ];
         specialArgs = { inherit inputs; inherit system; };
     };
@@ -103,6 +108,12 @@ SNOWFLAKETXT="{ config, pkgs, inputs, system, ... }:
   snowflakeos.gnome.enable = true;
   snowflakeos.osInfo.enable = true;
   programs.nix-software-center = {
+    enable = true;
+    systemconfig = \"/etc/nixos/configuration.nix\";
+    flake = \"/etc/nixos/flake.nix\";
+    flakearg = \"snowflakeos\";
+  };
+  programs.nixos-conf-editor = {
     enable = true;
     systemconfig = \"/etc/nixos/configuration.nix\";
     flake = \"/etc/nixos/flake.nix\";
