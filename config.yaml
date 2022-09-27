@@ -38,7 +38,7 @@ suggested_languages:
 # A custom logo and text can be defined. Otherwise a default is used.
 # Default: logo: None, text: None, usage: yes
 welcome_page:
-    logo    : '/etc/os-installer/icons/snowflake.png'
+    logo    : '/etc/os-installer/icons/snowflakeos.png'
     text    : 'Welcome to the SnowflakeOS installation! Still in development, proceed with caution!'
     usage   : yes
 
