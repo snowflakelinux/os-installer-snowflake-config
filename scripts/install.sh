@@ -1,7 +1,5 @@
 #! /bin/sh
 set -e
-# This is an example installer script. For OS-Installer to use it, place it at:
-# /etc/os-installer/scripts/install.sh
 # The script gets called with the following environment variables set:
 # OSI_LOCALE              : Locale to be used in the new system
 # OSI_DEVICE_PATH         : Device path at which to install
@@ -34,8 +32,6 @@ echo 'OSI_ENCRYPTION_PIN       ' $OSI_ENCRYPTION_PIN
 echo ''
 
 # Pretending to do something
-echo 'Pretending to do something'
-echo 'ID: ' $(id)
 DEV=$(echo "$OSI_DEVICE_PATH" | tr -d '"')
 if [[ $OSI_DEVICE_IS_PARTITION == 1 ]]
 then

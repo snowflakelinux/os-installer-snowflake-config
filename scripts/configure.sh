@@ -1,7 +1,5 @@
 #! /bin/sh
 set -e
-# This is an example configuration script. For OS-Installer to use it, place it at:
-# /etc/os-installer/scripts/configure.sh
 # The script gets called with the environment variables from the install script
 # (see install.sh) and these additional variables:
 # OSI_USER_NAME          : User's name. Not ASCII-fied
@@ -63,6 +61,33 @@ then
   DISK=$(lsblk $(echo "$OSI_DEVICE_PATH" | tr -d '"') -npdbro pkname)
 else
   DISK=$(echo "$OSI_DEVICE_PATH" | tr -d '"')
+fi
+
+if [[ $OSI_ADDITIONAL_SOFTWARE == *"prime"* ]]
+then
+  LSPCI=$(lspci -D)
+  NVIDIAPCIORIG=$(echo "$LSPCI" | grep NVIDIA | grep 'VGA\|3D\|Display' | awk '{print $1}')
+  NVIDIAPCI=$(echo "$LSPCI" | grep NVIDIA | grep 'VGA\|3D\|Display' | awk '{print $1}' | cut -c6- | sed "s/\./:/g" | sed -e "s/^/:/" | sed -E "s/(:0)([0-9])/:\2/g"  | cut -c2- | awk -F ":" '{$1=strtonum("0x" $1)} {$2=strtonum("0x" $2)} {$3=strtonum("0x" $3)} 1' | sed "s/\ /:/g")
+  AMDGPUORIG=$(echo "$LSPCI" | grep AMD | grep 'VGA\|3D\|Display' | awk '{print $1}')
+  AMDPCI=$(echo "$LSPCI" | grep AMD | grep 'VGA\|3D\|Display' | awk '{print $1}' | cut -c6- | sed "s/\./:/g" | sed -e "s/^/:/" | sed -E "s/(:0)([0-9])/:\2/g"  | cut -c2- | awk -F ":" '{$1=strtonum("0x" $1)} {$2=strtonum("0x" $2)} {$3=strtonum("0x" $3)} 1' | sed "s/\ /:/g")
+  INTELPCIORIG=$(echo "$LSPCI" | grep Intel | grep 'VGA\|3D\|Display' | awk '{print $1}')
+  INTELPCI=$(echo "$LSPCI" | grep Intel | grep 'VGA\|3D\|Display' | awk '{print $1}' | cut -c6- | sed "s/\./:/g" | sed -e "s/^/:/" | sed -E "s/(:0)([0-9])/:\2/g"  | cut -c2- | awk -F ":" '{$1=strtonum("0x" $1)} {$2=strtonum("0x" $2)} {$3=strtonum("0x" $3)} 1' | sed "s/\ /:/g")
+  if [[ ! -z "$NVIDIAPCI" ]]
+  then
+    echo 'NVIDIA PCI ID: ' $NVIDIAPCIORIG ' -> ' $NVIDIAPCI
+    if [[ ! -z "$INTELPCI" ]]
+    then
+      echo 'Intel PCI ID: ' $INTELPCIORIG ' -> ' $INTELPCI
+      INTELPRIME=1
+    elif [[ ! -z "$AMDPCI" ]]
+    then
+      echo 'AMD PCI ID: ' $AMDGPUORIG ' -> ' $AMDPCI
+      AMDPRIME=1
+    fi
+  fi
+elif [[ $OSI_ADDITIONAL_SOFTWARE == *"nvidia"* ]]
+then
+  NVIDIA=1
 fi
 
 FLAKETXT="{
@@ -127,8 +152,20 @@ CFGHEAD="# Edit this configuration file to define what should be installed on
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 
 { config, pkgs, ... }:
+"
 
-{
+CFGNVIDIAOFFLOAD="let
+  nvidia-offload = pkgs.writeShellScriptBin \"nvidia-offload\" ''
+    export __NV_PRIME_RENDER_OFFLOAD=1
+    export __NV_PRIME_RENDER_OFFLOAD_PROVIDER=NVIDIA-G0
+    export __GLX_VENDOR_LIBRARY_NAME=nvidia
+    export __VK_LAYER_NV_optimus=NVIDIA_only
+    exec -a \"\$0\" \"\$@\"
+  '';
+in
+"
+
+CFGIMPORTS="{
   imports =
     [ # Include the results of the hardware scan.
       ./hardware-configuration.nix
@@ -172,12 +209,46 @@ CFGKERNEL="  # Use the latest kernel
   
 "
 
-CFGNETWORK="  networking.hostName = \"snowflakeos\"; # Define your hostname.
-  # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
+CFGNVIDIA="  # Use NVIDIA Proprietary drivers
+  services.xserver.videoDrivers = [ \"nvidia\" ];
+  hardware.opengl.extraPackages = with pkgs; [
+    vaapiVdpau
+  ];
 
-  # Configure network proxy if necessary
-  # networking.proxy.default = \"http://user:password@proxy:port/\";
-  # networking.proxy.noProxy = \"127.0.0.1,localhost,internal.domain\";
+"
+
+CFGINTELPRIME="  # Use NVIDIA Prime with NVIDIA Proprietary drivers
+  hardware.nvidia.modesetting.enable = true;
+  hardware.nvidia.powerManagement.enable = true;
+  hardware.nvidia.prime = {
+    sync.enable = true;
+    intelBusId = \"PCI:$INTELPCI\";
+    nvidiaBusId = \"PCI:$NVIDIAPCI\";
+  };
+  services.xserver.videoDrivers = [ \"nvidia\" ];
+  hardware.opengl.extraPackages = with pkgs; [
+    vaapiVdpau
+  ];
+
+"
+
+CFGAMDPRIME="  # Use NVIDIA Prime with NVIDIA Proprietary drivers
+  hardware.nvidia.modesetting.enable = true;
+  hardware.nvidia.powerManagement.enable = true;
+  hardware.nvidia.prime = {
+    sync.enable = true;
+    amdgpuBusId = \"PCI:$AMDPCI\";
+    nvidiaBusId = \"PCI:$NVIDIAPCI\";
+  };
+  services.xserver.videoDrivers = [ \"nvidia\" ];
+  hardware.opengl.extraPackages = with pkgs; [
+    vaapiVdpau
+  ];
+
+"
+
+CFGNETWORK="  # Define your hostname.
+  networking.hostName = \"snowflakeos\";
 
   # Enable networking
   networking.networkmanager.enable = true;
@@ -213,6 +284,7 @@ CFGKEYMAP="  # Configure keymap in X11
     layout = \"$KEYBOARD_LAYOUT\";
     xkbVariant = \"$KEYBOARD_VARIANT\";
   };
+  console.useXkbConfig = true;
 
 "
 
@@ -222,11 +294,6 @@ CFGGNOME="  # Enable the X11 windowing system.
   # Enable the GNOME Desktop Environment.
   services.xserver.displayManager.gdm.enable = true;
   services.xserver.desktopManager.gnome.enable = true;
-
-"
-
-CFGCONSOLE="  # Configure console keymap
-  console.keyMap = \"\";
 
 "
 
@@ -242,16 +309,7 @@ CFGMISC="  # Enable CUPS to print documents.
     alsa.enable = true;
     alsa.support32Bit = true;
     pulse.enable = true;
-    # If you want to use JACK applications, uncomment this
-    #jack.enable = true;
-
-    # use the example session manager (no others are packaged yet so this is enabled by default,
-    # no need to redefine it in your config for now)
-    #media-session.enable = true;
   };
-
-  # Enable touchpad support (enabled default in most desktopManager).
-  # services.xserver.libinput.enable = true;
 
 "
 
@@ -282,36 +340,22 @@ CFGUNFREE="  # Allow unfree packages
 
 "
 
-CFGPKGS="  # List packages installed in system profile. To search, run:
-  # $ nix search wget
+CFGPKGS="  # List packages installed in system profile.
   environment.systemPackages = with pkgs; [
-  #  vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
-  #  wget
     firefox
   ];
 
 "
 
-CFGTAIL="  # Some programs need SUID wrappers, can be configured further or are
-  # started in user sessions.
-  # programs.mtr.enable = true;
-  # programs.gnupg.agent = {
-  #   enable = true;
-  #   enableSSHSupport = true;
-  # };
+CFGPKGSPRIME="  # List packages installed in system profile.
+  environment.systemPackages = with pkgs; [
+    nvidia-offload
+    firefox
+  ];
 
-  # List services that you want to enable:
+"
 
-  # Enable the OpenSSH daemon.
-  # services.openssh.enable = true;
-
-  # Open ports in the firewall.
-  # networking.firewall.allowedTCPPorts = [ ... ];
-  # networking.firewall.allowedUDPPorts = [ ... ];
-  # Or disable the firewall altogether.
-  # networking.firewall.enable = false;
-
-  nix.extraOptions = ''
+CFGTAIL="  nix.extraOptions = ''
     experimental-features = nix-command flakes
   '';
 
@@ -334,6 +378,11 @@ pkexec sh -c 'echo -n "$0" > /tmp/os-installer/etc/nixos/snowflake.nix' "$SNOWFL
 
 # Create configuration.nix
 pkexec sh -c 'echo -n "$0" > /tmp/os-installer/etc/nixos/configuration.nix' "$CFGHEAD"
+if [[ $INTELPRIME == 1 || $AMDPRIME == 1 ]]
+then
+  pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGNVIDIAOFFLOAD"
+fi
+pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGIMPORTS"
 if [[ -d /sys/firmware/efi/efivars ]]
 then
     pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGBOOTEFI"
@@ -341,6 +390,16 @@ else
     pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGBOOTBIOS"
 fi
 pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGKERNEL"
+if [[ $INTELPRIME == 1 ]]
+then
+  pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGINTELPRIME"
+elif [[ $AMDPRIME == 1 ]]
+then
+  pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGAMDPRIME"
+elif [[ $NVIDIA == 1 ]]
+then
+  pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGNVIDIA"
+fi
 pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGNETWORK"
 pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGTIME"
 pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGLOCALE"
@@ -358,7 +417,12 @@ then
     pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGAUTOLOGINGDM"
 fi
 pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGUNFREE"
-pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGPKGS"
+if [[ $INTELPRIME == 1 || $AMDPRIME == 1 ]]
+then
+  pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGPKGSPRIME"
+else
+  pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGPKGS"
+fi
 pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$CFGTAIL"
 
 # Install SnowflakeOS

@@ -14,7 +14,7 @@ internet_connection_required: yes
 
 # A URL/IP address to be used to check for an existing internet connection.
 # Default: 'http://nmcheck.gnome.org/check_network_status.txt'
-internet_checker_url: 'http://nmcheck.gnome.org/check_network_status.txt'
+internet_checker_url: 'http://cache.nixos.org/'
 
 # Skip the language selection dialog by specifing a language, e.g. 'pt_BR'
 # Default: no
@@ -57,17 +57,10 @@ offer_disk_encryption: no
 # Additionally translations for name and description can be specified by
 # placing a language code at the end after an underscore, e.g.: 'name_jp'
 # Default: []
-# additional_software:
-#     - package        : 'firefox'
-#       default        : yes
-#       name           : 'Firefox'
-#       name_de        : 'Feuerfuchs'
-#       description    : 'Popular Web Browser from Mozilla'
-#       description_de : 'Beliebter Webbrowser entwickelt durch Mozilla'
-#       icon_path      : '/etc/os-installer/icons/firefox.png'
-#     - package        : 'libreoffice-fresh'
-#       default        : no
-#       name           : 'LibreOffice'
-#       description    : 'Office Suite for Documents, Tables, Presentations and more'
-#       description_de : 'Sammlung an BüroAnwendungen für Dokumente, Tabellen, Präsentationen und mehr'
-#       icon_path      : '/etc/os-installer/icons/libreoffice-main.png'
+additional_software:
+    - package        : 'nvidia'
+      name           : 'NVIDIA Proprietary Drivers'
+      description    : 'Proprietary drivers for NVIDIA GPUs'
+    - package        : 'prime'
+      name           : 'NVIDIA Prime for laptops'
+      description    : 'Sets up NVIDIA Prime to allow GPU offloading'
