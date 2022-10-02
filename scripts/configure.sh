@@ -65,19 +65,36 @@ fi
 
 if [[ $OSI_ADDITIONAL_SOFTWARE == *"prime"* ]]
 then
-  LSPCI=$(lspci -D)
-  NVIDIAPCIORIG=$(echo "$LSPCI" | grep NVIDIA | grep 'VGA\|3D\|Display' | awk '{print $1}')
-  NVIDIAPCI=$(echo "$LSPCI" | grep NVIDIA | grep 'VGA\|3D\|Display' | awk '{print $1}' | cut -c6- | sed "s/\./:/g" | sed -e "s/^/:/" | sed -E "s/(:0)([0-9])/:\2/g"  | cut -c2- | awk -F ":" '{$1=strtonum("0x" $1)} {$2=strtonum("0x" $2)} {$3=strtonum("0x" $3)} 1' | sed "s/\ /:/g")
-  AMDGPUORIG=$(echo "$LSPCI" | grep AMD | grep 'VGA\|3D\|Display' | awk '{print $1}')
-  AMDPCI=$(echo "$LSPCI" | grep AMD | grep 'VGA\|3D\|Display' | awk '{print $1}' | cut -c6- | sed "s/\./:/g" | sed -e "s/^/:/" | sed -E "s/(:0)([0-9])/:\2/g"  | cut -c2- | awk -F ":" '{$1=strtonum("0x" $1)} {$2=strtonum("0x" $2)} {$3=strtonum("0x" $3)} 1' | sed "s/\ /:/g")
-  INTELPCIORIG=$(echo "$LSPCI" | grep Intel | grep 'VGA\|3D\|Display' | awk '{print $1}')
-  INTELPCI=$(echo "$LSPCI" | grep Intel | grep 'VGA\|3D\|Display' | awk '{print $1}' | cut -c6- | sed "s/\./:/g" | sed -e "s/^/:/" | sed -E "s/(:0)([0-9])/:\2/g"  | cut -c2- | awk -F ":" '{$1=strtonum("0x" $1)} {$2=strtonum("0x" $2)} {$3=strtonum("0x" $3)} 1' | sed "s/\ /:/g")
+  awk_program='function generate_string (str) {
+      str = substr(str, 6) # Trim leading 0000:
+      str = gensub(/\./, ":", "g", str) # Replace . with :
+      str = gensub(/(0+)([0-9])/, "\\2", "g", str) # Remove leading 0
+      split(str, strArr, ":") # Transform each part into decimal
+      out = ""
+      for (i in strArr) {
+       out = out":"strtonum("0x"strArr[i])
+      }
+      return substr(out, 2)
+  }
+  /(VGA|3D|Display).*AMD.*/ { print "AMD", $1, generate_string($1) }
+  /(VGA|3D|Display).*NVIDIA.*/ { print "NVIDIA", $1, generate_string($1) }
+  /(VGA|3D|Display).*Intel.*/ { print "INTEL", $1, generate_string($1) }
+  '
+
+  PCIOUT=$(awk "$awk_program" <(lspci -D))
+  INTELPCI=$(echo "$PCIOUT" | grep INTEL | awk '{ print $3 }')
+  INTELPCIORIG=$(echo "$PCIOUT" | grep INTEL | awk '{ print $2 }')
+  AMDPCI=$(echo "$PCIOUT" | grep AMD | awk '{ print $3 }')
+  AMDPCIORIG=$(echo "$PCIOUT" | grep AMD | awk '{ print $2 }')
+  NVIDIAPCI=$(echo "$PCIOUT" | grep NVIDIA | awk '{ print $3 }')
+  NVIDIAPCIORIG=$(echo "$PCIOUT" | grep NVIDIA | awk '{ print $2 }')
+
   if [[ ! -z "$NVIDIAPCI" ]]
   then
     echo 'NVIDIA PCI ID: ' $NVIDIAPCIORIG ' -> ' $NVIDIAPCI
     if [[ ! -z "$INTELPCI" ]]
     then
-      echo 'Intel PCI ID: ' $INTELPCIORIG ' -> ' $INTELPCI
+      echo 'INTEL PCI ID: ' $INTELPCIORIG ' -> ' $INTELPCI
       INTELPRIME=1
     elif [[ ! -z "$AMDPCI" ]]
     then
