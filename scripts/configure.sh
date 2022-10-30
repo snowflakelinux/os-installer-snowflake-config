@@ -114,6 +114,10 @@ FLAKETXT="{
       url = \"github:snowflakelinux/snowflake-modules\";
       inputs.nixpkgs.follows = \"nixpkgs\";
     };
+    nix-data = {
+      url = \"github:snowflakelinux/nix-data\";
+      inputs.nixpkgs.follows = \"nixpkgs\";
+    };
     nix-software-center = {
       url = \"github:vlinkz/nix-software-center\";
       inputs.nixpkgs.follows = \"nixpkgs\";
@@ -122,9 +126,13 @@ FLAKETXT="{
       url = \"github:vlinkz/nixos-conf-editor\";
       inputs.nixpkgs.follows = \"nixpkgs\";
     };
+    snow = {
+      url = \"github:snowflakelinux/snow\";
+      inputs.nixpkgs.follows = \"nixpkgs\";
+    };
   };
 
-  outputs = { self, nixpkgs, snowflake, nix-software-center, nixos-conf-editor, ... }@inputs:
+  outputs = { self, nixpkgs, ... }@inputs:
     let
       system = \"x86_64-linux\";
     in
@@ -134,9 +142,8 @@ FLAKETXT="{
         modules = [
           ./configuration.nix
           ./snowflake.nix
-          snowflake.nixosModules.snowflake
-          nix-software-center.nixosModules.\${system}.nix-software-center
-          nixos-conf-editor.nixosModules.\${system}.nixos-conf-editor
+          inputs.snowflake.nixosModules.snowflake
+          inputs.nix-data.nixosModules.\${system}.nix-data
         ];
         specialArgs = { inherit inputs; inherit system; };
     };
@@ -147,20 +154,19 @@ FLAKETXT="{
 SNOWFLAKETXT="{ config, pkgs, inputs, system, ... }:
 
 {
+  environment.systemPackages = [
+    inputs.nix-software-center.packages.\${system}.nix-software-center
+    inputs.nixos-conf-editor.packages.\${system}.nixos-conf-editor
+    inputs.snow.packages.\${system}.snow
+    pkgs.git # For rebuiling with github flakes
+  ];
+  programs.nix-data = {
+    systemconfig = \"/etc/nixos/configuration.nix\";
+    flake = \"/etc/nixos/flake.nix\";
+    flakearg = \"snowflakeos\";
+  };
   snowflakeos.gnome.enable = true;
   snowflakeos.osInfo.enable = true;
-  programs.nix-software-center = {
-    enable = true;
-    systemconfig = \"/etc/nixos/configuration.nix\";
-    flake = \"/etc/nixos/flake.nix\";
-    flakearg = \"snowflakeos\";
-  };
-  programs.nixos-conf-editor = {
-    enable = true;
-    systemconfig = \"/etc/nixos/configuration.nix\";
-    flake = \"/etc/nixos/flake.nix\";
-    flakearg = \"snowflakeos\";
-  };
 }
 "
 
