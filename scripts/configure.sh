@@ -52,15 +52,15 @@ echo 'OSI_ADDITIONAL_SOFTWARE  ' $OSI_ADDITIONAL_SOFTWARE
 echo ''
 
 NIXOSVER=$(nixos-version | head -c 5)
-USERNAME=$(echo $OSI_USER_NAME | iconv -f utf-8 -t ascii//translit | sed 's/[[:space:]]//g' | tr '[:upper:]' '[:lower:]')
+USERNAME=\"$(echo $OSI_USER_NAME | iconv -f utf-8 -t ascii//translit | sed 's/[[:space:]]//g' | tr '[:upper:]' '[:lower:]')\"
 KEYBOARD_LAYOUT=$(gsettings get org.gnome.desktop.input-sources sources | grep -o "'[^']*')" | sed "s/'//" | sed "s/')//" | head -n 1 | cut -f1 -d"+")
 KEYBOARD_VARIANT=$(gsettings get org.gnome.desktop.input-sources sources | grep -o "'[^']*')" | sed "s/'//" | sed "s/')//" | head -n 1 | grep -Po '\+.*' | cut -c2-)
 
 if [[ $OSI_DEVICE_IS_PARTITION == 1 ]]
 then
-  DISK=$(lsblk $(echo "$OSI_DEVICE_PATH" | tr -d '"') -npdbro pkname)
+  DISK=$(lsblk $OSI_DEVICE_PATH -npdbro pkname)
 else
-  DISK=$(echo "$OSI_DEVICE_PATH" | tr -d '"')
+  DISK=$OSI_DEVICE_PATH
 fi
 
 if [[ $OSI_ADDITIONAL_SOFTWARE == *"prime"* ]]
@@ -279,25 +279,25 @@ CFGNETWORK="  # Define your hostname.
 "
 
 CFGTIME="  # Set your time zone.
-  time.timeZone = $OSI_TIMEZONE;
+  time.timeZone = \"$OSI_TIMEZONE\";
 
 "
 
 CFGLOCALE="  # Select internationalisation properties.
-  i18n.defaultLocale = $OSI_LOCALE;
+  i18n.defaultLocale = \"$OSI_LOCALE\";
 
 "
 
 CFGLOCALEEXTRAS="  i18n.extraLocaleSettings = {
-    LC_ADDRESS = $OSI_FORMATS;
-    LC_IDENTIFICATION = $OSI_FORMATS;
-    LC_MEASUREMENT = $OSI_FORMATS;
-    LC_MONETARY = $OSI_FORMATS;
-    LC_NAME = $OSI_FORMATS;
-    LC_NUMERIC = $OSI_FORMATS;
-    LC_PAPER = $OSI_FORMATS;
-    LC_TELEPHONE = $OSI_FORMATS;
-    LC_TIME = $OSI_FORMATS;
+    LC_ADDRESS = \"$OSI_FORMATS\";
+    LC_IDENTIFICATION = \"$OSI_FORMATS\";
+    LC_MEASUREMENT = \"$OSI_FORMATS\";
+    LC_MONETARY = \"$OSI_FORMATS\";
+    LC_NAME = \"$OSI_FORMATS\";
+    LC_NUMERIC = \"$OSI_FORMATS\";
+    LC_PAPER = \"$OSI_FORMATS\";
+    LC_TELEPHONE = \"$OSI_FORMATS\";
+    LC_TIME = \"$OSI_FORMATS\";
   };
 
 "
@@ -339,7 +339,7 @@ CFGMISC="  # Enable CUPS to print documents.
 CFGUSERS="  # Define a user account. Don't forget to set a password with ‘passwd’.
   users.users.$USERNAME = {
     isNormalUser = true;
-    description = $OSI_USER_NAME;
+    description = \"$OSI_USER_NAME\";
     extraGroups = [ \"wheel\" \"networkmanager\" \"dialout\" ];
   };
 
@@ -451,7 +451,7 @@ pkexec sh -c 'echo -n "$0" >> /tmp/os-installer/etc/nixos/configuration.nix' "$C
 # Install SnowflakeOS
 pkexec nixos-install --root /tmp/os-installer --no-root-passwd --no-channel-copy --flake /tmp/os-installer/etc/nixos#snowflakeos
 
-echo ${USERNAME:1:-1}:${OSI_USER_PASSWORD:1:-1} | pkexec nixos-enter --root /tmp/os-installer -c chpasswd
+echo ${USERNAME:1:-1}:$OSI_USER_PASSWORD | pkexec nixos-enter --root /tmp/os-installer -c chpasswd
 
 echo
 echo 'Configuration completed.'

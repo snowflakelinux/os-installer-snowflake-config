@@ -32,7 +32,7 @@ echo 'OSI_ENCRYPTION_PIN       ' $OSI_ENCRYPTION_PIN
 echo ''
 
 # Pretending to do something
-DEV=$(echo "$OSI_DEVICE_PATH" | tr -d '"')
+DEV=$OSI_DEVICE_PATH
 if [[ $OSI_DEVICE_IS_PARTITION == 1 ]]
 then
     echo 'Device is partition'
